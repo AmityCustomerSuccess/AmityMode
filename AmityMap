@@ -3,6 +3,28 @@
   googleMap: function(o) {
     var id = alamode.makeId(10);
 
+    var iconBase = 'https://storage.googleapis.com/amity_images/map_icons/';
+
+    var icons = {
+          darkgreen: {
+            icon: iconBase + 'darkgreen.svg'
+          },
+          green: {
+            icon: iconBase + 'green.svg'
+          },
+          yellow: {
+            icon: iconBase + 'yellow.svg'
+          },
+          red: {
+            icon: iconBase + 'red.svg'
+          },
+          darkred: {
+            icon: iconBase + 'darkred.svg'
+          }
+        };
+
+    var defaultIcon = iconBase + 'neutral.svg';
+
     var latColumn = o["lat_column"],
         lngColumn = o["lng_column"],
         queryName = o["query_name"],
@@ -10,6 +32,7 @@
         // Optional
         title = o["title"] || queryName,
         labelColumn = o["label_column"],
+        iconColumn = o["icon_column"],
         htmlElement= o["html_element"] || "body",
         centerLat = o["center_lat"] || 39.5,
         centerLng = o["center_lng"] || -98.35,
@@ -57,10 +80,16 @@
             label = "";
           }
 
+          var icon = defaultIcon;
+          if (iconColumn) {
+             icon = icons[d[iconColumn]];
+          }
+
           var marker = new google.maps.Marker({
             position: {lat:lat, lng:lng},
             map: map,
-            title: label
+            title: label,
+            icon: icon
           })
 
           var infowindow = new google.maps.InfoWindow({
@@ -75,4 +104,4 @@
 
       }
     })
-  },
+  }
