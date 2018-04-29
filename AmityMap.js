@@ -1,5 +1,63 @@
 // Built with Google Maps Javascript API
   // https://developers.google.com/maps/documentation/javascript/
+var version = "0.18";
+
+var alamode = {
+
+  reportError: function(msg) {
+    $("<h1 class='mode-error'>").text(msg).prependTo(document.body);
+  },
+
+  getColumnsFromQuery: function(queryName) {
+    var columns = datasets.filter(function(d) { if (d) { return d.queryName == queryName;}; })[0];
+    if (!columns) {
+      alamode.reportError("No such query: '" + queryName + "'");
+      return [];
+    }
+    return columns.columns
+  },
+
+  getDataFromQuery: function(queryName) {
+    var data = datasets.filter(function(d) { if (d) { return d.queryName == queryName;}; })[0];
+    if (!data) {
+      alamode.reportError("No such query: '" + queryName + "'");
+      return [];
+    }
+    return data.content;
+  },
+
+  makeId: function(chars) {
+    var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",
+        text = "";
+
+    for (var i=0; i < chars; i++ ) {
+      text += possible.charAt(Math.floor(Math.random() * possible.length));
+    }
+    return text;
+  },
+
+  addContainerElement: function(el, clear) {
+
+    clear = clear || false;
+
+    id = alamode.makeId(10);
+
+    if (el == "body") {
+      $("<div id='" + id + "'></div>").addClass(id).addClass("mode-graphic-container").appendTo(".mode-content");
+    } else if ($(el).length === 0) {
+      alamode.reportError("No such element: '" + el + "'");
+    } else {
+
+      if (clear) {
+        $(el).empty();
+      }
+
+      $(el).addClass("mode-graphic-container");
+      $(el).addClass(id);
+    }
+
+    return "." + id;
+  },
   googleMap: function(o) {
     var id = alamode.makeId(10);
 
@@ -105,3 +163,4 @@
       }
     })
   }
+}
