@@ -181,61 +181,61 @@
                     .on("click", function (d, i) { click(d, index, datum); });
              };
 
-    function timeline (gParent) {
-      var g = gParent.append("g");
-      var gParentSize = gParent[0][0].getBoundingClientRect();
+         function timeline (gParent) {
+            var g = gParent.append("g");
+            var gParentSize = gParent[0][0].getBoundingClientRect();
 
-      var gParentItem = d3.select(gParent[0][0]);
+            var gParentItem = d3.select(gParent[0][0]);
 
-      var yAxisMapping = {},
-        maxStack = 1,
-        minTime = 0,
-        maxTime = 0;
+            var yAxisMapping = {},
+                maxStack = 1,
+                minTime = 0,
+                maxTime = 0;
 
-      setWidth();
+            setWidth();
 
-      // check if the user wants relative time
-      // if so, substract the first timestamp from each subsequent timestamps
-      if(timeIsRelative){
-        g.each(function (d, i) {
-          d.forEach(function (datum, index) {
-            datum.times.forEach(function (time, j) {
-              if(index === 0 && j === 0){
-                originTime = time.starting_time;               //Store the timestamp that will serve as origin
-                time.starting_time = 0;                        //Set the origin
-                time.ending_time = time.ending_time - originTime;     //Store the relative time (millis)
-              }else{
-                time.starting_time = time.starting_time - originTime;
-                time.ending_time = time.ending_time - originTime;
-              }
-            });
-          });
-        });
-      }
+            // check if the user wants relative time
+            // if so, substract the first timestamp from each subsequent timestamps
+            if( timeIsRelative ){
+               g.each(function (d, i) {
+                  d.forEach(function (datum, index) {
+                     datum.times.forEach(function (time, j) {
+                     if ( index === 0 && j === 0){
+                        originTime = time.starting_time;               //Store the timestamp that will serve as origin
+                        time.starting_time = 0;                        //Set the origin
+                        time.ending_time = time.ending_time - originTime;     //Store the relative time (millis)
+                     }else{
+                       time.starting_time = time.starting_time - originTime;
+                       time.ending_time = time.ending_time - originTime;
+                       }
+                   });
+                 });
+               });
+             }
 
-      // check how many stacks we're gonna need
-      // do this here so that we can draw the axis before the graph
-      if (stacked || ending === 0 || beginning === 0) {
-        g.each(function (d, i) {
-          d.forEach(function (datum, index) {
+            // check how many stacks we're gonna need
+            // do this here so that we can draw the axis before the graph
+            if (stacked || ending === 0 || beginning === 0) {
+               g.each(function (d, i) {
+                 d.forEach(function (datum, index) {
 
-            // create y mapping for stacked graph
-            if (stacked && Object.keys(yAxisMapping).indexOf(index) == -1) {
-              yAxisMapping[index] = maxStack;
-              maxStack++;
-            }
+                    // create y mapping for stacked graph
+                    if (stacked && Object.keys(yAxisMapping).indexOf(index) == -1) {
+                       yAxisMapping[index] = maxStack;
+                       maxStack++;
+                       }
 
-            // figure out beginning and ending times if they are unspecified
-            datum.times.forEach(function (time, i) {
-              if(beginning === 0)
-                if (time.starting_time < minTime || (minTime === 0 && timeIsRelative === false))
-                  minTime = time.starting_time;
-              if(ending === 0)
-                if (time.ending_time > maxTime)
-                  maxTime = time.ending_time;
-            });
-          });
-        });
+                   // figure out beginning and ending times if they are unspecified
+                   datum.times.forEach(function (time, i) {
+                      if(beginning === 0)
+                         if (time.starting_time < minTime || (minTime === 0 && timeIsRelative === false))
+                            minTime = time.starting_time;
+                      if(ending === 0)
+                         if (time.ending_time > maxTime)
+                            maxTime = time.ending_time;
+                   });
+                 });
+               });
 
         if (ending === 0) {
           ending = maxTime;
