@@ -30,10 +30,10 @@
             return data.content;
         }
         
-        , timeline: function() {
-           var DISPLAY_TYPES = ["circle", "rect"];
+        , timeline: (function () {
+            var DISPLAY_TYPES = ["circle", "rect"];
 
-           var hover = function () {},
+            var hover = function () {},
                mouseover = function () {},
                mouseout = function () {},
                click = function () {},
@@ -92,98 +92,94 @@
                          .call(xAxis);
              };
 
-    var appendTimeAxisCalendarYear = function (nav) {
-      var calendarLabel = beginning.getFullYear();
+          var appendTimeAxisCalendarYear = function (nav) {
+             var calendarLabel = beginning.getFullYear();
 
-      if (beginning.getFullYear() != ending.getFullYear()) {
-        calendarLabel = beginning.getFullYear() + "-" + ending.getFullYear()
-      }
+             if (beginning.getFullYear() != ending.getFullYear()) {
+                calendarLabel = beginning.getFullYear() + "-" + ending.getFullYear()
+                }
 
-      nav.append("text")
-        .attr("transform", "translate(" + 20 + ", 0)")
-        .attr("x", 0)
-        .attr("y", 14)
-        .attr("class", "calendarYear")
-        .text(calendarLabel)
-      ;
-    };
-    var appendTimeAxisNav = function (g) {
-      var timelineBlocks = 6;
-      var leftNavMargin = (margin.left - navMargin);
-      var incrementValue = (width - margin.left)/timelineBlocks;
-      var rightNavMargin = (width - margin.right - incrementValue + navMargin);
+             nav.append("text")
+                .attr("transform", "translate(" + 20 + ", 0)")
+                .attr("x", 0)
+                .attr("y", 14)
+                .attr("class", "calendarYear")
+                .text(calendarLabel);
+           };
+            
+           var appendTimeAxisNav = function (g) {
+             var timelineBlocks = 6;
+             var leftNavMargin = (margin.left - navMargin);
+             var incrementValue = (width - margin.left)/timelineBlocks;
+             var rightNavMargin = (width - margin.right - incrementValue + navMargin);
 
-      var nav = g.append('g')
-          .attr("class", "axis")
-          .attr("transform", "translate(0, 20)")
-        ;
+             var nav = g.append('g')
+                        .attr("class", "axis")
+                        .attr("transform", "translate(0, 20)");
 
-      if(showAxisCalendarYear) { appendTimeAxisCalendarYear(nav) };
+             if(showAxisCalendarYear) { appendTimeAxisCalendarYear(nav) };
 
-      nav.append("text")
-        .attr("transform", "translate(" + leftNavMargin + ", 0)")
-        .attr("x", 0)
-        .attr("y", 14)
-        .attr("class", "chevron")
-        .text("<")
-        .on("click", function () {
-          return navigateLeft(beginning, chartData);
-        })
-      ;
+             nav.append("text")
+                .attr("transform", "translate(" + leftNavMargin + ", 0)")
+                .attr("x", 0)
+                .attr("y", 14)
+                .attr("class", "chevron")
+                .text("<")
+                .on("click", function () {
+                    return navigateLeft(beginning, chartData);
+                      });
 
-      nav.append("text")
-        .attr("transform", "translate(" + rightNavMargin + ", 0)")
-        .attr("x", 0)
-        .attr("y", 14)
-        .attr("class", "chevron")
-        .text(">")
-        .on("click", function () {
-          return navigateRight(ending, chartData);
-        })
-      ;
-    };
+            nav.append("text")
+               .attr("transform", "translate(" + rightNavMargin + ", 0)")
+               .attr("x", 0)
+               .attr("y", 14)
+               .attr("class", "chevron")
+               .text(">")
+               .on("click", function () {
+                  return navigateRight(ending, chartData);
+                  });
+           };
 
-    var appendAxisHeaderBackground = function (g, xAxis, yAxis) {
-      g.insert("rect")
-        .attr("class", "row-green-bar")
-        .attr("x", xAxis)
-        .attr("width", width)
-        .attr("y", yAxis)
-        .attr("height", itemHeight)
-        .attr("fill", axisBgColor);
-    };
+           var appendAxisHeaderBackground = function (g, xAxis, yAxis) {
+              g.insert("rect")
+               .attr("class", "row-green-bar")
+               .attr("x", xAxis)
+               .attr("width", width)
+               .attr("y", yAxis)
+               .attr("height", itemHeight)
+               .attr("fill", axisBgColor);
+              };
 
-    var appendTimeAxisTick = function(g, xAxis, maxStack) {
-      g.append("g")
-        .attr("class", "axis")
-        .attr("transform", "translate(" + 0 + "," + (margin.top + (itemHeight + itemMargin) * maxStack) + ")")
-        .attr(timeAxisTickFormat.stroke, timeAxisTickFormat.spacing)
-        .call(xAxis.tickFormat("").tickSize(-(margin.top + (itemHeight + itemMargin) * (maxStack - 1) + 3), 0, 0));
-    };
+           var appendTimeAxisTick = function(g, xAxis, maxStack) {
+              g.append("g")
+               .attr("class", "axis")
+               .attr("transform", "translate(" + 0 + "," + (margin.top + (itemHeight + itemMargin) * maxStack) + ")")
+               .attr(timeAxisTickFormat.stroke, timeAxisTickFormat.spacing)
+               .call(xAxis.tickFormat("").tickSize(-(margin.top + (itemHeight + itemMargin) * (maxStack - 1) + 3), 0, 0));
+               };
 
-    var appendBackgroundBar = function (yAxisMapping, index, g, data, datum) {
-      var greenbarYAxis = ((itemHeight + itemMargin) * yAxisMapping[index]) + margin.top;
-      g.selectAll("svg").data(data).enter()
-        .insert("rect")
-        .attr("class", "row-green-bar")
-        .attr("x", fullLengthBackgrounds ? 0 : margin.left)
-        .attr("width", fullLengthBackgrounds ? width : (width - margin.right - margin.left))
-        .attr("y", greenbarYAxis)
-        .attr("height", itemHeight)
-        .attr("fill", backgroundColor instanceof Function ? backgroundColor(datum, index) : backgroundColor)
-      ;
-    };
+           var appendBackgroundBar = function (yAxisMapping, index, g, data, datum) {
+              var greenbarYAxis = ((itemHeight + itemMargin) * yAxisMapping[index]) + margin.top;
+              g.selectAll("svg").data(data).enter()
+               .insert("rect")
+               .attr("class", "row-green-bar")
+               .attr("x", fullLengthBackgrounds ? 0 : margin.left)
+               .attr("width", fullLengthBackgrounds ? width : (width - margin.right - margin.left))
+               .attr("y", greenbarYAxis)
+               .attr("height", itemHeight)
+               .attr("fill", backgroundColor instanceof Function ? backgroundColor(datum, index) : backgroundColor);
+              };
 
-    var appendLabel = function (gParent, yAxisMapping, index, hasLabel, datum) {
-      var fullItemHeight    = itemHeight + itemMargin;
-      var rowsDown          = margin.top + (fullItemHeight/2) + fullItemHeight * (yAxisMapping[index] || 1);
+          var appendLabel = function (gParent, yAxisMapping, index, hasLabel, datum) {
+             var fullItemHeight    = itemHeight + itemMargin;
+             var rowsDown          = margin.top + (fullItemHeight/2) + fullItemHeight * (yAxisMapping[index] || 1);
 
-      gParent.append("text")
-        .attr("class", "timeline-label")
-        .attr("transform", "translate(" + labelMargin + "," + rowsDown + ")")
-        .text(hasLabel ? labelFunction(datum.label) : datum.id)
-        .on("click", function (d, i) { click(d, index, datum); });
-    };
+             gParent.append("text")
+                    .attr("class", "timeline-label")
+                    .attr("transform", "translate(" + labelMargin + "," + rowsDown + ")")
+                    .text(hasLabel ? labelFunction(datum.label) : datum.id)
+                    .on("click", function (d, i) { click(d, index, datum); });
+             };
 
     function timeline (gParent) {
       var g = gParent.append("g");
@@ -712,7 +708,8 @@
 
     return timeline;
   };
-}
+
+      })
         
         , gauge: function (opt) {
             console.log('new guage()');
