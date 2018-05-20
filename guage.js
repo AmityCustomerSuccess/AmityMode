@@ -31,6 +31,8 @@
         }
         
         , timeline: (function () {
+            console.log("NEW TIMELINE()");
+            
             var DISPLAY_TYPES = ["circle", "rect"];
 
             var hover = function () {},
@@ -182,6 +184,7 @@
              };
 
          function timeline (gParent) {
+             console.log("timeline()")
             var g = gParent.append("g");
             var gParentSize = gParent[0][0].getBoundingClientRect();
 
