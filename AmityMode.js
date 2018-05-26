@@ -1,0 +1,1301 @@
+amityMode = {
+
+      reportError: function(msg) {
+        $("<h1 class='mode-error'>").text(msg).prependTo(document.body);
+      },
+
+      getColumnsFromQuery: function(queryName) {
+        var columns = datasets.filter(function(d) {
+          if (d) {
+            return d.queryName == queryName;
+          };
+        })[0];
+        if (!columns) {
+          amityMode.reportError("No such query: '" + queryName + "'");
+          return [];
+        }
+        return columns.columns
+      },
+
+      getDataFromQuery: function(queryName) {
+          console.log('getDataFromQuery(' + queryName + ')');
+          var data = datasets.filter(function(d) {
+            if (d) {
+              return d.queryName == queryName;
+            };
+          })[0];
+          if (!data) {
+            amityMode.reportError("No such query: '" + queryName + "'");
+            return [];
+          }
+          console.log('data = \n' + data.content)
+          return data.content;
+        },
+
+      amityTimeline : function (opt) {
+          console.log('new amityTimeline')
+          // console.log(JSON.stringify(opt, ' ', 3))
+
+          var timelineLib = new amityMode.timeline();
+
+          var data = amityMode.getDataFromQuery(opt.queryName),
+          startColumnName = opt.startCol,
+          endColumnName = opt.endCol,
+          statusColumName = opt.statusCol,
+          accountCol = opt.accountCol,
+          width = opt.width ? opt.width : "900",
+          divName = opt.divName ? opt.divName : "#timeline1";
+
+          // console.log(JSON.stringify(data[0], ' ', 3));
+          var active = {
+             label: "Active",
+             color: {
+                start: "gold",
+                end: "darkcyan",
+                bar: "gold"
+                }
+            };
+
+          var converted = {
+             label: "Converted",
+             color: {
+                start: "lightgreen",
+                end: "darkgreen",
+                bar: "lightgreen"
+                }
+            };
+
+          var didNotConvert = {
+             label: "Did Not Convert",
+             color: {
+                start: "lightcoral",
+                end: "darkred",
+                bar: "lightcoral"
+                }
+             };
+
+        var statusList = {};
+        statusList.active = active;
+        statusList.converted = converted;
+        statusList.didNotConverted = didNotConvert;
+
+        var timelines = makeTimelines(data, startColumnName, endColumnName, statusColumName, accountCol, statusList);
+        drawTimelines(timelines);
+
+
+        function drawTimelines(timelines) {
+           console.log('drawTimelines()');
+           console.log(JSON.stringify(timelines, ' ', 3));
+           drawTimeline(timelines.beginning, timelines.ending, timelines.timelines)
+           };
+
+        function drawTimeline(beginning, ending, timelinea) {
+              console.log('drawTimeline()');
+              console.log(JSON.stringify(timelinea, ' ', 3));
+              console.log('beginning = ' + beginning);
+              console.log('ending = ' + ending);
+
+              var chart = d3.timeline()
+                            .tickFormat({
+                               format: d3.time.format("%b %Y"),
+                               tickTime: d3.time.months,
+                               tickInterval: 1,
+                               tickSize: 3
+                               })
+                            .beginning(beginning) // we can optionally add beginning and ending times to speed up rendering a little
+                            .ending(ending)
+                            .showTimeAxisTick() // toggles tick marks
+                            .stack()
+                            .margin({
+                               left: 100,
+                               right: 0,
+                               top: 0,
+                               bottom: 0
+                               })
+                           .orient("bottom")
+                           .showToday()
+                           .rotateTicks(45)
+                           .showTodayFormat({
+                              marginTop: 20,
+                              marginBottom: 40,
+                              width: 3,
+                              color: "teal"
+                              });
+
+                    console.log("OKIE DOKIE.")
+                    console.log('width = ' + width)
+                    var svg = d3.select(divName)
+                                .append("svg")
+                                .attr("width", width)
+                                .datum(timelinea)
+                                .call(chart);
+                       }
+
+
+        function makeTimeline(start, end, account, format) {
+           console.log('makeTimeline()');
+           console.log(start)
+           console.log(new Date(start).valueOf())
+           return {
+              label: account,
+              times: [
+              {  // Main Bar
+                 starting_time: new Date(start).valueOf(),
+                 ending_time: new Date(end).valueOf(),
+                 color: format.color.bar
+                 },
+              {  // Start Circle
+                 starting_time: new Date(start).valueOf(),
+                 display: "circle",
+                 color: format.color.start
+                 },
+              {  // End Circle
+                 starting_time: new Date(end).valueOf(),
+                 display: "circle",
+                 color: format.color.end,
+                 label: format.label
+                 }
+              ]
+           }
+        }
+
+
+
+        function makeTimelines(data, startColumnName, endColumnName, statusColumnName, accountColumnName, statusList) {
+           console.log('makeTimelines()');
+           console.log(startColumnName)
+
+           var timelines = [];
+           var startCol = [],
+               endCol = [];
+
+           for (var t = 0; t < data.length; t++){
+              console.log('t = ' + t);
+
+              console.log(data[t][startColumnName]);
+
+              var statusVal = data[t][statusColumName];
+              timelines[t] = makeTimeline(data[t][startColumnName], data[t][endColumnName], data[t][accountColumnName], statusList[statusVal]);
+              console.log(JSON.stringify(timelines[t]));
+              startCol[t] = new Date(data[t][startColumnName]).valueOf();
+              endCol[t] =  new Date(data[t][endColumnName]).valueOf();
+              }
+           console.log(JSON.stringify(startCol))
+           console.log(JSON.stringify(endCol))
+           console.log(Math.min.apply( Math, startCol))
+           console.log(Math.max.apply( Math, endCol))
+           var beginning = new moment(Math.min.apply( Math, startCol)).subtract(1,'months').startOf();
+           var ending = new moment(Math.max.apply( Math, endCol)).add(1, 'months').startOf();
+           return {
+              beginning: beginning,
+              ending: ending,
+              timelines: timelines
+              }
+           }
+        },
+
+      timeline: (
+          d3.timeline = function() {
+          console.log("NEW TIMELINE()")
+
+          var DISPLAY_TYPES = ["circle", "rect"];
+
+          var hover = function() {},
+            mouseover = function() {},
+            mouseout = function() {},
+            click = function() {},
+            scroll = function() {},
+            labelFunction = function(label) {
+              return label;
+            },
+            navigateLeft = function() {},
+            navigateRight = function() {},
+            orient = "bottom",
+            width = null,
+            height = null,
+            rowSeparatorsColor = null,
+            backgroundColor = null,
+            tickFormat = {
+              format: d3.time.format("%I %p"),
+              tickTime: d3.time.hours,
+              tickInterval: 1,
+              tickSize: 6,
+              tickValues: null
+            },
+            colorCycle = d3.scale.category20(),
+            colorPropertyName = null,
+            display = "rect",
+            beginning = 0,
+            labelMargin = 0,
+            ending = 0,
+            margin = {
+              left: 30,
+              right: 30,
+              top: 30,
+              bottom: 30
+            },
+            stacked = false,
+            rotateTicks = false,
+            timeIsRelative = false,
+            fullLengthBackgrounds = false,
+            itemHeight = 20,
+            itemMargin = 5,
+            navMargin = 60,
+            showTimeAxis = true,
+            showAxisTop = false,
+            showTodayLine = false,
+            timeAxisTick = false,
+            timeAxisTickFormat = {
+              stroke: "stroke-dasharray",
+              spacing: "4 10"
+            },
+            showTodayFormat = {
+              marginTop: 25,
+              marginBottom: 0,
+              width: 1,
+              color: colorCycle
+            },
+            showBorderLine = false,
+            showBorderFormat = {
+              marginTop: 25,
+              marginBottom: 0,
+              width: 1,
+              color: colorCycle
+            },
+            showAxisHeaderBackground = false,
+            showAxisNav = false,
+            showAxisCalendarYear = false,
+            axisBgColor = "white",
+            chartData = {};
+
+          var appendTimeAxis = function(g, xAxis, yPosition) {
+
+            if (showAxisHeaderBackground) {
+              appendAxisHeaderBackground(g, 0, 0);
+            }
+
+            if (showAxisNav) {
+              appendTimeAxisNav(g)
+            };
+
+            var axis = g.append("g")
+              .attr("class", "axis")
+              .attr("transform", "translate(" + 0 + "," + yPosition + ")")
+              .call(xAxis);
+          };
+
+          var appendTimeAxisCalendarYear = function(nav) {
+            var calendarLabel = beginning.getFullYear();
+
+            if (beginning.getFullYear() != ending.getFullYear()) {
+              calendarLabel = beginning.getFullYear() + "-" + ending.getFullYear()
+            }
+
+            nav.append("text")
+              .attr("transform", "translate(" + 20 + ", 0)")
+              .attr("x", 0)
+              .attr("y", 14)
+              .attr("class", "calendarYear")
+              .text(calendarLabel);
+          };
+
+          var appendTimeAxisNav = function(g) {
+            var timelineBlocks = 6;
+            var leftNavMargin = (margin.left - navMargin);
+            var incrementValue = (width - margin.left) / timelineBlocks;
+            var rightNavMargin = (width - margin.right - incrementValue + navMargin);
+
+            var nav = g.append('g')
+              .attr("class", "axis")
+              .attr("transform", "translate(0, 20)");
+
+            if (showAxisCalendarYear) {
+              appendTimeAxisCalendarYear(nav)
+            };
+
+            nav.append("text")
+              .attr("transform", "translate(" + leftNavMargin + ", 0)")
+              .attr("x", 0)
+              .attr("y", 14)
+              .attr("class", "chevron")
+              .text("<")
+              .on("click", function() {
+                return navigateLeft(beginning, chartData);
+              });
+
+            nav.append("text")
+              .attr("transform", "translate(" + rightNavMargin + ", 0)")
+              .attr("x", 0)
+              .attr("y", 14)
+              .attr("class", "chevron")
+              .text(">")
+              .on("click", function() {
+                return navigateRight(ending, chartData);
+              });
+          };
+
+          var appendAxisHeaderBackground = function(g, xAxis, yAxis) {
+            g.insert("rect")
+              .attr("class", "row-green-bar")
+              .attr("x", xAxis)
+              .attr("width", width)
+              .attr("y", yAxis)
+              .attr("height", itemHeight)
+              .attr("fill", axisBgColor);
+          };
+
+          var appendTimeAxisTick = function(g, xAxis, maxStack) {
+            g.append("g")
+              .attr("class", "axis")
+              .attr("transform", "translate(" + 0 + "," + (margin.top + (itemHeight + itemMargin) * maxStack) + ")")
+              .attr(timeAxisTickFormat.stroke, timeAxisTickFormat.spacing)
+              .call(xAxis.tickFormat("").tickSize(-(margin.top + (itemHeight + itemMargin) * (maxStack - 1) + 3), 0, 0));
+          };
+
+          var appendBackgroundBar = function(yAxisMapping, index, g, data, datum) {
+            var greenbarYAxis = ((itemHeight + itemMargin) * yAxisMapping[index]) + margin.top;
+            g.selectAll("svg").data(data).enter()
+              .insert("rect")
+              .attr("class", "row-green-bar")
+              .attr("x", fullLengthBackgrounds ? 0 : margin.left)
+              .attr("width", fullLengthBackgrounds ? width : (width - margin.right - margin.left))
+              .attr("y", greenbarYAxis)
+              .attr("height", itemHeight)
+              .attr("fill", backgroundColor instanceof Function ? backgroundColor(datum, index) : backgroundColor);
+          };
+
+          var appendLabel = function(gParent, yAxisMapping, index, hasLabel, datum) {
+            var fullItemHeight = itemHeight + itemMargin;
+            var rowsDown = margin.top + (fullItemHeight / 2) + fullItemHeight * (yAxisMapping[index] || 1);
+
+            gParent.append("text")
+              .attr("class", "timeline-label")
+              .attr("transform", "translate(" + labelMargin + "," + rowsDown + ")")
+              .text(hasLabel ? labelFunction(datum.label) : datum.id)
+              .on("click", function(d, i) {
+                click(d, index, datum);
+              });
+          };
+
+          function timeline(gParent) {
+            console.log("timeline()")
+            var g = gParent.append("g");
+            var gParentSize = gParent[0][0].getBoundingClientRect();
+
+            var gParentItem = d3.select(gParent[0][0]);
+
+            var yAxisMapping = {},
+              maxStack = 1,
+              minTime = 0,
+              maxTime = 0;
+
+            setWidth();
+
+            // check if the user wants relative time
+            // if so, substract the first timestamp from each subsequent timestamps
+            if (timeIsRelative) {
+              g.each(function(d, i) {
+                d.forEach(function(datum, index) {
+                  datum.times.forEach(function(time, j) {
+                    if (index === 0 && j === 0) {
+                      originTime = time.starting_time; //Store the timestamp that will serve as origin
+                      time.starting_time = 0; //Set the origin
+                      time.ending_time = time.ending_time - originTime; //Store the relative time (millis)
+                    } else {
+                      time.starting_time = time.starting_time - originTime;
+                      time.ending_time = time.ending_time - originTime;
+                    }
+                  });
+                });
+              });
+            }
+
+            // check how many stacks we're gonna need
+            // do this here so that we can draw the axis before the graph
+            if (stacked || ending === 0 || beginning === 0) {
+              g.each(function(d, i) {
+                d.forEach(function(datum, index) {
+
+                  // create y mapping for stacked graph
+                  if (stacked && Object.keys(yAxisMapping).indexOf(index) == -1) {
+                    yAxisMapping[index] = maxStack;
+                    maxStack++;
+                  }
+
+                  // figure out beginning and ending times if they are unspecified
+                  datum.times.forEach(function(time, i) {
+                    if (beginning === 0)
+                      if (time.starting_time < minTime || (minTime === 0 && timeIsRelative === false))
+                        minTime = time.starting_time;
+                    if (ending === 0)
+                      if (time.ending_time > maxTime)
+                        maxTime = time.ending_time;
+                  });
+                });
+              });
+
+              if (ending === 0) {
+                ending = maxTime;
+              }
+              if (beginning === 0) {
+                beginning = minTime;
+              }
+            }
+
+            var scaleFactor = (1 / (ending - beginning)) * (width - margin.left - margin.right);
+
+            // draw the axis
+            var xScale = d3.time.scale()
+              .domain([beginning, ending])
+              .range([margin.left, width - margin.right]);
+
+            var xAxis = d3.svg.axis()
+              .scale(xScale)
+              .orient(orient)
+              .tickFormat(tickFormat.format)
+              .tickSize(tickFormat.tickSize);
+
+            if (tickFormat.tickValues != null) {
+              xAxis.tickValues(tickFormat.tickValues);
+            } else {
+              xAxis.ticks(tickFormat.numTicks || tickFormat.tickTime, tickFormat.tickInterval);
+            }
+
+            // draw the chart
+            g.each(function(d, i) {
+              chartData = d;
+              d.forEach(function(datum, index) {
+                var data = datum.times;
+                var hasLabel = (typeof(datum.label) != "undefined");
+
+                // issue warning about using id per data set. Ids should be individual to data elements
+                if (typeof(datum.id) != "undefined") {
+                  console.warn("d3Timeline Warning: Ids per dataset is deprecated in favor of a 'class' key. Ids are now per data element.");
+                }
+
+                if (backgroundColor) {
+                  appendBackgroundBar(yAxisMapping, index, g, data, datum);
+                }
+
+                g.selectAll("svg").data(data).enter()
+                  .append(function(d, i) {
+                    return document.createElementNS(d3.ns.prefix.svg, "display" in d ? d.display : display);
+                  })
+                  .attr("x", getXPos)
+                  .attr("y", getStackPosition)
+                  .attr("width", function(d, i) {
+                    return (d.ending_time - d.starting_time) * scaleFactor;
+                  })
+                  .attr("cy", function(d, i) {
+                    return getStackPosition(d, i) + itemHeight / 2;
+                  })
+                  .attr("cx", getXPos)
+                  .attr("r", itemHeight / 2)
+                  .attr("height", itemHeight)
+                  .style("fill", function(d, i) {
+                    var dColorPropName;
+                    if (d.color) return d.color;
+                    if (colorPropertyName) {
+                      dColorPropName = d[colorPropertyName];
+                      if (dColorPropName) {
+                        return colorCycle(dColorPropName);
+                      } else {
+                        return colorCycle(datum[colorPropertyName]);
+                      }
+                    }
+                    return colorCycle(index);
+                  })
+                  .on("mousemove", function(d, i) {
+                    hover(d, index, datum);
+                  })
+                  .on("mouseover", function(d, i) {
+                    mouseover(d, i, datum);
+                  })
+                  .on("mouseout", function(d, i) {
+                    mouseout(d, i, datum);
+                  })
+                  .on("click", function(d, i) {
+                    click(d, index, datum);
+                  })
+                  .attr("class", function(d, i) {
+                    return datum.class ? "timelineSeries_" + datum.class : "timelineSeries_" + index;
+                  })
+                  .attr("id", function(d, i) {
+                    // use deprecated id field
+                    if (datum.id && !d.id) {
+                      return 'timelineItem_' + datum.id;
+                    }
+
+                    return d.id ? d.id : "timelineItem_" + index + "_" + i;
+                  });
+
+                g.selectAll("svg").data(data).enter()
+                  .append("text")
+                  .attr("x", getXTextPos)
+                  .attr("y", getStackTextPosition)
+                  .text(function(d) {
+                    return d.label;
+                  });
+
+                if (rowSeparatorsColor) {
+                  var lineYAxis = (itemHeight + itemMargin / 2 + margin.top + (itemHeight + itemMargin) * yAxisMapping[index]);
+                  gParent.append("svg:line")
+                    .attr("class", "row-separator")
+                    .attr("x1", 0 + margin.left)
+                    .attr("x2", width - margin.right)
+                    .attr("y1", lineYAxis)
+                    .attr("y2", lineYAxis)
+                    .attr("stroke-width", 1)
+                    .attr("stroke", rowSeparatorsColor);
+                }
+
+                // add the label
+                if (hasLabel) {
+                  appendLabel(gParent, yAxisMapping, index, hasLabel, datum);
+                }
+
+                if (typeof(datum.icon) !== "undefined") {
+                  gParent.append("image")
+                    .attr("class", "timeline-label")
+                    .attr("transform", "translate(" + 0 + "," + (margin.top + (itemHeight + itemMargin) * yAxisMapping[index]) + ")")
+                    .attr("xlink:href", datum.icon)
+                    .attr("width", margin.left)
+                    .attr("height", itemHeight);
+                }
+
+                function getStackPosition(d, i) {
+                  if (stacked) {
+                    return margin.top + (itemHeight + itemMargin) * yAxisMapping[index];
+                  }
+                  return margin.top;
+                }
+
+                function getStackTextPosition(d, i) {
+                  if (stacked) {
+                    return margin.top + (itemHeight + itemMargin) * yAxisMapping[index] + itemHeight * 0.75;
+                  }
+                  return margin.top + itemHeight * 0.75;
+                }
+              });
+            });
+
+            var belowLastItem = (margin.top + (itemHeight + itemMargin) * maxStack);
+            var aboveFirstItem = margin.top;
+            var timeAxisYPosition = showAxisTop ? aboveFirstItem : belowLastItem;
+            if (showTimeAxis) {
+              appendTimeAxis(g, xAxis, timeAxisYPosition);
+            }
+            if (timeAxisTick) {
+              appendTimeAxisTick(g, xAxis, maxStack);
+            }
+
+            if (width > gParentSize.width) {
+              var move = function() {
+                var x = Math.min(0, Math.max(gParentSize.width - width, d3.event.translate[0]));
+                zoom.translate([x, 0]);
+                g.attr("transform", "translate(" + x + ",0)");
+                scroll(x * scaleFactor, xScale);
+              };
+
+              var zoom = d3.behavior.zoom().x(xScale).on("zoom", move);
+
+              gParent
+                .attr("class", "scrollable")
+                .call(zoom);
+            }
+
+            if (rotateTicks) {
+              g.selectAll(".tick text")
+                .attr("transform", function(d) {
+                  return "rotate(" + rotateTicks + ")translate(" +
+                    (this.getBBox().width / 2 + 10) + "," // TODO: change this 10
+                    +
+                    this.getBBox().height / 2 + ")";
+                });
+            }
+
+            var gSize = g[0][0].getBoundingClientRect();
+            setHeight();
+
+            if (showBorderLine) {
+              g.each(function(d, i) {
+                d.forEach(function(datum) {
+                  var times = datum.times;
+                  times.forEach(function(time) {
+                    appendLine(xScale(time.starting_time), showBorderFormat);
+                    appendLine(xScale(time.ending_time), showBorderFormat);
+                  });
+                });
+              });
+            }
+
+            if (showTodayLine) {
+              var todayLine = xScale(new Date());
+              appendLine(todayLine, showTodayFormat);
+            }
+
+            function getXPos(d, i) {
+              return margin.left + (d.starting_time - beginning) * scaleFactor;
+            }
+
+            function getXTextPos(d, i) {
+              return margin.left + (d.starting_time - beginning) * scaleFactor + 5;
+            }
+
+            function setHeight() {
+              if (!height && !gParentItem.attr("height")) {
+                if (itemHeight) {
+                  // set height based off of item height
+                  height = gSize.height + gSize.top - gParentSize.top;
+                  // set bounding rectangle height
+                  d3.select(gParent[0][0]).attr("height", height);
+                } else {
+                  throw "height of the timeline is not set";
+                }
+              } else {
+                if (!height) {
+                  height = gParentItem.attr("height");
+                } else {
+                  gParentItem.attr("height", height);
+                }
+              }
+            }
+
+            function setWidth() {
+              if (!width && !gParentSize.width) {
+                try {
+                  width = gParentItem.attr("width");
+                  if (!width) {
+                    throw "width of the timeline is not set. As of Firefox 27, timeline().with(x) needs to be explicitly set in order to render";
+                  }
+                } catch (err) {
+                  console.log(err);
+                }
+              } else if (!(width && gParentSize.width)) {
+                try {
+                  width = gParentItem.attr("width");
+                } catch (err) {
+                  console.log(err);
+                }
+              }
+              // if both are set, do nothing
+            }
+
+            function appendLine(lineScale, lineFormat) {
+              gParent.append("svg:line")
+                .attr("x1", lineScale)
+                .attr("y1", lineFormat.marginTop)
+                .attr("x2", lineScale)
+                .attr("y2", height - lineFormat.marginBottom)
+                .style("stroke", lineFormat.color) //"rgb(6,120,155)")
+                .style("stroke-width", lineFormat.width);
+            }
+
+          }
+
+          // SETTINGS
+
+          timeline.margin = function(p) {
+            if (!arguments.length) return margin;
+            margin = p;
+            return timeline;
+          };
+
+          timeline.orient = function(orientation) {
+            if (!arguments.length) return orient;
+            orient = orientation;
+            return timeline;
+          };
+
+          timeline.itemHeight = function(h) {
+            if (!arguments.length) return itemHeight;
+            itemHeight = h;
+            return timeline;
+          };
+
+          timeline.itemMargin = function(h) {
+            if (!arguments.length) return itemMargin;
+            itemMargin = h;
+            return timeline;
+          };
+
+          timeline.navMargin = function(h) {
+            if (!arguments.length) return navMargin;
+            navMargin = h;
+            return timeline;
+          };
+
+          timeline.height = function(h) {
+            if (!arguments.length) return height;
+            height = h;
+            return timeline;
+          };
+
+          timeline.width = function(w) {
+            if (!arguments.length) return width;
+            width = w;
+            return timeline;
+          };
+
+          timeline.display = function(displayType) {
+            if (!arguments.length || (DISPLAY_TYPES.indexOf(displayType) == -1)) return display;
+            display = displayType;
+            return timeline;
+          };
+
+          timeline.labelFormat = function(f) {
+            if (!arguments.length) return labelFunction;
+            labelFunction = f;
+            return timeline;
+          };
+
+          timeline.tickFormat = function(format) {
+            if (!arguments.length) return tickFormat;
+            tickFormat = format;
+            return timeline;
+          };
+
+          timeline.hover = function(hoverFunc) {
+            if (!arguments.length) return hover;
+            hover = hoverFunc;
+            return timeline;
+          };
+
+          timeline.mouseover = function(mouseoverFunc) {
+            if (!arguments.length) return mouseover;
+            mouseover = mouseoverFunc;
+            return timeline;
+          };
+
+          timeline.mouseout = function(mouseoutFunc) {
+            if (!arguments.length) return mouseout;
+            mouseout = mouseoutFunc;
+            return timeline;
+          };
+
+          timeline.click = function(clickFunc) {
+            if (!arguments.length) return click;
+            click = clickFunc;
+            return timeline;
+          };
+
+          timeline.scroll = function(scrollFunc) {
+            if (!arguments.length) return scroll;
+            scroll = scrollFunc;
+            return timeline;
+          };
+
+          timeline.colors = function(colorFormat) {
+            if (!arguments.length) return colorCycle;
+            colorCycle = colorFormat;
+            return timeline;
+          };
+
+          timeline.beginning = function(b) {
+            if (!arguments.length) return beginning;
+            beginning = b;
+            return timeline;
+          };
+
+          timeline.ending = function(e) {
+            if (!arguments.length) return ending;
+            ending = e;
+            return timeline;
+          };
+
+          timeline.labelMargin = function(m) {
+            if (!arguments.length) return labelMargin;
+            labelMargin = m;
+            return timeline;
+          };
+
+          timeline.rotateTicks = function(degrees) {
+            if (!arguments.length) return rotateTicks;
+            rotateTicks = degrees;
+            return timeline;
+          };
+
+          timeline.stack = function() {
+            stacked = !stacked;
+            return timeline;
+          };
+
+          timeline.relativeTime = function() {
+            timeIsRelative = !timeIsRelative;
+            return timeline;
+          };
+
+          timeline.showBorderLine = function() {
+            showBorderLine = !showBorderLine;
+            return timeline;
+          };
+
+          timeline.showBorderFormat = function(borderFormat) {
+            if (!arguments.length) return showBorderFormat;
+            showBorderFormat = borderFormat;
+            return timeline;
+          };
+
+          timeline.showToday = function() {
+            showTodayLine = !showTodayLine;
+            return timeline;
+          };
+
+          timeline.showTodayFormat = function(todayFormat) {
+            if (!arguments.length) return showTodayFormat;
+            showTodayFormat = todayFormat;
+            return timeline;
+          };
+
+          timeline.colorProperty = function(colorProp) {
+            if (!arguments.length) return colorPropertyName;
+            colorPropertyName = colorProp;
+            return timeline;
+          };
+
+          timeline.rowSeparators = function(color) {
+            if (!arguments.length) return rowSeparatorsColor;
+            rowSeparatorsColor = color;
+            return timeline;
+
+          };
+
+          timeline.background = function(color) {
+            if (!arguments.length) return backgroundColor;
+            backgroundColor = color;
+            return timeline;
+          };
+
+          timeline.showTimeAxis = function() {
+            showTimeAxis = !showTimeAxis;
+            return timeline;
+          };
+
+          timeline.showAxisTop = function() {
+            showAxisTop = !showAxisTop;
+            return timeline;
+          };
+
+          timeline.showAxisCalendarYear = function() {
+            showAxisCalendarYear = !showAxisCalendarYear;
+            return timeline;
+          };
+
+          timeline.showTimeAxisTick = function() {
+            timeAxisTick = !timeAxisTick;
+            return timeline;
+          };
+
+          timeline.fullLengthBackgrounds = function() {
+            fullLengthBackgrounds = !fullLengthBackgrounds;
+            return timeline;
+          };
+
+          timeline.showTimeAxisTickFormat = function(format) {
+            if (!arguments.length) return timeAxisTickFormat;
+            timeAxisTickFormat = format;
+            return timeline;
+          };
+
+          timeline.showAxisHeaderBackground = function(bgColor) {
+            showAxisHeaderBackground = !showAxisHeaderBackground;
+            if (bgColor) {
+              (axisBgColor = bgColor)
+            };
+            return timeline;
+          };
+
+          timeline.navigate = function(navigateBackwards, navigateForwards) {
+            if (!arguments.length) return [navigateLeft, navigateRight];
+            navigateLeft = navigateBackwards;
+            navigateRight = navigateForwards;
+            showAxisNav = !showAxisNav;
+            return timeline;
+          };
+
+          return timeline;
+        }),
+
+    gauge: function(opt) {
+
+      var data = amityMode.getDataFromQuery(opt.queryName),
+          valueColumnName = opt.valueColumn,
+          minValColumName = opt.minValueColumn,
+          maxValColumName = opt.maxValueColumn;
+
+      // Set defaults if not supplied
+      if (typeof opt === 'undefined') {
+        var opt = {}
+        }
+      console.log('data = ' + JSON.stringify(data));
+      opt.minVal = data[0][minValColumName] || 0;
+      opt.maxVal = data[0][maxValColumName] || 100;
+      opt.needleVal = data[0][valueColumnName] || opt.minVal;
+      console.log(JSON.stringify(opt));
+      if (typeof opt.gaugeRadius === 'undefined') {
+        opt.gaugeRadius = 200
+      }
+      if (typeof opt.minVal === 'undefined') {
+        opt.minVal = 0
+      }
+      if (typeof opt.maxVal === 'undefined') {
+        opt.maxVal = 100
+      }
+      if (typeof opt.tickSpaceMinVal === 'undefined') {
+        opt.tickSpaceMinVal = 1
+      }
+      if (typeof opt.tickSpaceMajVal === 'undefined') {
+        opt.tickSpaceMajVal = 10
+      }
+      if (typeof opt.divID === 'undefined') {
+        opt.divID = "vizBox"
+      }
+      if (typeof opt.needleVal === 'undefined') {
+        opt.needleVal = 60
+      }
+      if (typeof opt.gaugeUnits === 'undefined') {
+        opt.gaugeUnits = "%"
+      }
+      if (typeof opt.padding === 'undefined') {
+        opt.padding = 0.05
+      }
+      if (typeof opt.edgeWidth === 'undefined') {
+        opt.edgeWidth = 0.05
+      }
+      if (typeof opt.tickEdgeGap === 'undefined') {
+        opt.tickEdgeGap = 0.05
+      }
+      if (typeof opt.tickLengthMaj === 'undefined') {
+        opt.tickLengthMaj = 0.15
+      }
+      if (typeof opt.tickLengthMin === 'undefined') {
+        opt.tickLengthMin = 0.05
+      }
+      if (typeof opt.needleTickGap === 'undefined') {
+        opt.needleTickGap = 0.05
+      }
+      if (typeof opt.needleLengthNeg === 'undefined') {
+        opt.needleLengthNeg = 0.2
+      }
+      if (typeof opt.pivotRadius === 'undefined') {
+        opt.pivotRadius = 0.1
+      }
+      if (typeof opt.ticknessGaugeBasis === 'undefined') {
+        opt.ticknessGaugeBasis = 200
+      }
+      if (typeof opt.needleWidth === 'undefined') {
+        opt.needleWidth = 5
+      }
+      if (typeof opt.tickWidthMaj === 'undefined') {
+        opt.tickWidthMaj = 3
+      }
+      if (typeof opt.tickWidthMin === 'undefined') {
+        opt.tickWidthMin = 1
+      }
+      if (typeof opt.labelFontSize === 'undefined') {
+        opt.labelFontSize = 18
+      }
+      if (typeof opt.zeroTickAngle === 'undefined') {
+        opt.zeroTickAngle = 60
+      }
+      if (typeof opt.maxTickAngle === 'undefined') {
+        opt.maxTickAngle = 300
+      }
+      if (typeof opt.zeroNeedleAngle === 'undefined') {
+        opt.zeroNeedleAngle = 40
+      }
+      if (typeof opt.maxNeedleAngle === 'undefined') {
+        opt.maxNeedleAngle = 320
+      }
+      if (typeof opt.tickColMaj === 'undefined') {
+        opt.tickColMaj = '#0099CC'
+      }
+      if (typeof opt.tickColMin === 'undefined') {
+        opt.tickColMin = '#000'
+      }
+      if (typeof opt.outerEdgeCol === 'undefined') {
+        opt.outerEdgeCol = '#0099CC'
+      }
+      if (typeof opt.pivotCol === 'undefined') {
+        opt.pivotCol = '#999'
+      }
+      if (typeof opt.innerCol === 'undefined') {
+        opt.innerCol = '#fff'
+      }
+      if (typeof opt.unitsLabelCol === 'undefined') {
+        opt.unitsLabelCol = '#000'
+      }
+      if (typeof opt.tickLabelCol === 'undefined') {
+        opt.tickLabelCol = '#000'
+      }
+      if (typeof opt.needleCol === 'undefined') {
+        opt.needleCol = '#0099CC'
+      }
+      defaultFonts = '"Helvetica Neue", Helvetica, Arial, sans-serif'
+      if (typeof opt.tickFont === 'undefined') {
+        opt.tickFont = defaultFonts
+      }
+      if (typeof opt.unitsFont === 'undefined') {
+        opt.unitsFont = defaultFonts
+      }
+      // Calculate absolute values
+      opt.padding = opt.padding * opt.gaugeRadius, opt.edgeWidth = opt.edgeWidth * opt.gaugeRadius, opt.tickEdgeGap = opt.tickEdgeGap * opt.gaugeRadius, opt.tickLengthMaj = opt.tickLengthMaj * opt.gaugeRadius, opt.tickLengthMin = opt.tickLengthMin * opt.gaugeRadius, opt.needleTickGap = opt.needleTickGap * opt.gaugeRadius, opt.needleLengthNeg = opt.needleLengthNeg * opt.gaugeRadius, opt.pivotRadius = opt.pivotRadius * opt.gaugeRadius;
+      opt.needleWidth = opt.needleWidth * (opt.gaugeRadius / opt.ticknessGaugeBasis), opt.tickWidthMaj = opt.tickWidthMaj * (opt.gaugeRadius / opt.ticknessGaugeBasis), opt.tickWidthMin = opt.tickWidthMin * (opt.gaugeRadius / opt.ticknessGaugeBasis), opt.labelFontSize = opt.labelFontSize * (opt.gaugeRadius / opt.ticknessGaugeBasis);
+      //Calculate required values
+      var needleLengthPos = opt.gaugeRadius - opt.padding - opt.edgeWidth - opt.tickEdgeGap - opt.tickLengthMaj - opt.needleTickGap,
+        needlePathLength = opt.needleLengthNeg + needleLengthPos,
+        needlePathStart = opt.needleLengthNeg * (-1),
+        tickStartMaj = opt.gaugeRadius - opt.padding - opt.edgeWidth - opt.tickEdgeGap - opt.tickLengthMaj,
+        tickStartMin = opt.gaugeRadius - opt.padding - opt.edgeWidth - opt.tickEdgeGap - opt.tickLengthMin,
+        labelStart = tickStartMaj - opt.labelFontSize,
+        innerEdgeRadius = opt.gaugeRadius - opt.padding - opt.edgeWidth,
+        outerEdgeRadius = opt.gaugeRadius - opt.padding,
+        originX = opt.gaugeRadius,
+        originY = opt.gaugeRadius;
+      if (opt.labelFontSize < 6) {
+        opt.labelFontSize = 0
+      }
+      //Define a linear scale to convert values to needle displacement angle (degrees)
+      var valueScale = d3.scale.linear().domain([opt.minVal, opt.maxVal]).range([opt.zeroTickAngle, opt.maxTickAngle]);
+      //Calculate tick mark angles (degrees)
+      var counter = 0,
+        tickAnglesMaj = [],
+        tickAnglesMin = [],
+        tickSpacingMajDeg = valueScale(opt.tickSpaceMajVal) - valueScale(0),
+        tickSpacingMinDeg = valueScale(opt.tickSpaceMinVal) - valueScale(0);
+      for (var i = opt.zeroTickAngle; i <= opt.maxTickAngle; i = i + tickSpacingMajDeg) {
+        tickAnglesMaj.push(opt.zeroTickAngle + (tickSpacingMajDeg * counter))
+        counter++
+      }
+      counter = 0
+      for (var i = opt.zeroTickAngle; i <= opt.maxTickAngle; i = i + tickSpacingMinDeg) {
+        //Check for an existing major tick angle
+        var exists = 0
+        tickAnglesMaj.forEach(function(d) {
+          if ((opt.zeroTickAngle + (tickSpacingMinDeg * counter)) == d) {
+            exists = 1
+          }
+        })
+        if (exists == 0) {
+          tickAnglesMin.push(opt.zeroTickAngle + (tickSpacingMinDeg * counter))
+        }
+        counter++
+      }
+      //Calculate major tick mark label text
+      counter = 0
+      var tickLabelText = [];
+      for (var i = opt.zeroTickAngle; i <= opt.maxTickAngle; i = i + tickSpacingMajDeg) {
+        tickLabelText.push(opt.minVal + (opt.tickSpaceMajVal * counter))
+        counter++
+      }
+      //Add the svg content holder to the visualisation box element in the document (vizbox)
+      var svgWidth = opt.gaugeRadius * 2,
+        svgHeight = opt.gaugeRadius * 2;
+      var svg = d3.select("#" + opt.divID).append("svg").attr("id", "SVGbox-" + opt.divID).attr("width", svgWidth).attr("height", svgHeight).attr({
+        'xmlns': 'http://www.w3.org/2000/svg',
+        'xmlns:xlink': 'http://www.w3.org/1999/xlink'
+      });
+      //Draw the circles that make up the edge of the gauge
+      var circleGroup = svg.append("svg:g").attr("id", "circles")
+      var outerC = circleGroup.append("svg:circle").attr("cx", originX).attr("cy", originY).attr("r", outerEdgeRadius).style("fill", opt.outerEdgeCol).style("stroke", "none");
+      var innerC = circleGroup.append("svg:circle").attr("cx", originX).attr("cy", originY).attr("r", innerEdgeRadius).style("fill", opt.innerCol).style("stroke", "none");
+      //Draw the circle for the needle 'pivot'
+      var pivotC = circleGroup.append("svg:circle").attr("cx", originX).attr("cy", originY).attr("r", opt.pivotRadius).style("fill", opt.pivotCol).style("stroke", "none");
+      //Define two functions for calculating the coordinates of the major & minor tick mark paths
+      tickCalcMaj = function() {
+        function pathCalc(d, i) {
+          //Offset the tick mark angle so zero is vertically down, then convert to radians
+          var tickAngle = d + 90,
+            tickAngleRad = dToR(tickAngle);
+          var y1 = originY + (tickStartMaj * Math.sin(tickAngleRad)),
+            y2 = originY + ((tickStartMaj + opt.tickLengthMaj) * Math.sin(tickAngleRad)),
+            x1 = originX + (tickStartMaj * Math.cos(tickAngleRad)),
+            x2 = originX + ((tickStartMaj + opt.tickLengthMaj) * Math.cos(tickAngleRad)),
+            lineData = [{
+              "x": x1,
+              "y": y1
+            }, {
+              "x": x2,
+              "y": y2
+            }];
+          //Use a D3.JS path generator
+          var lineFunc = d3.svg.line().x(function(d) {
+            return d.x;
+          }).y(function(d) {
+            return d.y;
+          });
+          var lineSVG = lineFunc(lineData)
+          return lineSVG
+        }
+        return pathCalc;
+      };
+      tickCalcMin = function() {
+        function pathCalc(d, i) {
+          //Offset the tick mark angle so zero is vertically down, then convert to radians
+          var tickAngle = d + 90,
+            tickAngleRad = dToR(tickAngle);
+          var y1 = originY + (tickStartMin * Math.sin(tickAngleRad)),
+            y2 = originY + ((tickStartMin + opt.tickLengthMin) * Math.sin(tickAngleRad)),
+            x1 = originX + (tickStartMin * Math.cos(tickAngleRad)),
+            x2 = originX + ((tickStartMin + opt.tickLengthMin) * Math.cos(tickAngleRad)),
+            lineData = [{
+              "x": x1,
+              "y": y1
+            }, {
+              "x": x2,
+              "y": y2
+            }];
+          //Use a D3.JS path generator
+          var lineFunc = d3.svg.line().x(function(d) {
+            return d.x;
+          }).y(function(d) {
+            return d.y;
+          });
+          var lineSVG = lineFunc(lineData)
+          return lineSVG
+        }
+        return pathCalc;
+      };
+      var pathTickMaj = tickCalcMaj(),
+        pathTickMin = tickCalcMin();
+      //Add a group to hold the ticks
+      var ticks = svg.append("svg:g").attr("id", "tickMarks")
+      //Add a groups for major and minor ticks (minor first, so majors overlay)
+      var ticksMin = ticks.append("svg:g").attr("id", "minorTickMarks")
+      var ticksMaj = ticks.append("svg:g").attr("id", "majorTickMarks")
+      //Draw the tick marks
+      var tickMin = ticksMin.selectAll("path").data(tickAnglesMin).enter().append("path").attr("d", pathTickMin).style("stroke", opt.tickColMin).style("stroke-width", opt.tickWidthMin + "px");
+      var tickMaj = ticksMaj.selectAll("path").data(tickAnglesMaj).enter().append("path").attr("d", pathTickMaj).style("stroke", opt.tickColMaj).style("stroke-width", opt.tickWidthMaj + "px");
+      //Define functions to calcuate the positions of the labels for the tick marks
+      function labelXcalc(d, i) {
+        var tickAngle = d + 90,
+          tickAngleRad = dToR(tickAngle),
+          labelW = opt.labelFontSize / (tickLabelText[i].toString().length / 2)
+        x1 = originX + ((labelStart - labelW) * Math.cos(tickAngleRad));
+        return x1
+      }
+
+      function labelYcalc(d, i) {
+        var tickAngle = d + 90,
+          tickAngleRad = dToR(tickAngle),
+          y1 = originY + ((labelStart) * Math.sin(tickAngleRad)) + (opt.labelFontSize / 2);
+        return y1
+      }
+      //Add labels for major tick marks
+      var tickLabels = svg.append("svg:g").attr("id", "tickLabels")
+      var tickLabel = tickLabels.selectAll("text").data(tickAnglesMaj).enter().append("text").attr("x", function(d, i) {
+        return labelXcalc(d, i)
+      }).attr("y", function(d, i) {
+        return labelYcalc(d, i)
+      }).attr("font-size", opt.labelFontSize).attr("text-anchor", "middle").style("fill", opt.tickLabelCol).style("font-weight", "bold").attr("font-family", opt.tickFont).text(function(d, i) {
+        return tickLabelText[i]
+      })
+      //Add label for units
+      var unitLabels = svg.append("svg:g").attr("id", "unitLabels")
+      var unitsLabel = unitLabels.selectAll("text").data([0]).enter().append("text").attr("x", function(d, i) {
+        return labelXcalc(d, i)
+      }).attr("y", function(d, i) {
+        return labelYcalc(d, i)
+      }).attr("font-size", opt.labelFontSize * 1.5).attr("text-anchor", "middle").style("fill", opt.unitsLabelCol).style("font-weight", "bold").attr("font-family", opt.unitsFont).text(opt.gaugeUnits)
+      //Draw needle
+      var needleAngle = [opt.zeroNeedleAngle]
+      //Define a function for calculating the coordinates of the needle paths (see tick mark equivalent)
+      needleCalc = function() {
+        function pathCalc(d, i) {
+          var nAngleRad = dToR(d + 90)
+          var y1 = originY + (needlePathStart * Math.sin(nAngleRad)),
+            y2 = originY + ((needlePathStart + needlePathLength) * Math.sin(nAngleRad)),
+            x1 = originX + (needlePathStart * Math.cos(nAngleRad)),
+            x2 = originX + ((needlePathStart + needlePathLength) * Math.cos(nAngleRad)),
+            lineData = [{
+              "x": x1,
+              "y": y1
+            }, {
+              "x": x2,
+              "y": y2
+            }];
+          var lineFunc = d3.svg.line().x(function(d) {
+            return d.x;
+          }).y(function(d) {
+            return d.y;
+          });
+          var lineSVG = lineFunc(lineData)
+          return lineSVG
+        }
+        return pathCalc;
+      };
+      var pathNeedle = needleCalc();
+      //Add a group to hold the needle path
+      var needleGroup = svg.append("svg:g").attr("id", "needle")
+      //Draw the needle path
+      var needlePath = needleGroup.selectAll("path").data(needleAngle).enter().append("path").attr("d", pathNeedle).style("stroke", opt.needleCol).style("stroke-width", opt.needleWidth + "px");
+      //Animate the transistion of the needle to its starting value
+      needlePath.transition().duration(1000)
+        //.delay(0)
+        .ease("elastic", 1, 0.9)
+        //.attr("transform", function(d)
+        .attrTween("transform", function(d, i, a) {
+          needleAngle = valueScale(opt.needleVal)
+          //Check for min/max ends of the needle
+          if (needleAngle > opt.maxTickAngle) {
+            needleAngle = opt.maxNeedleAngle
+          }
+          if (needleAngle < opt.zeroTickAngle) {
+            needleAngle = opt.zeroNeedleAngle
+          }
+          var needleCentre = originX + "," + originY,
+            needleRot = needleAngle - opt.zeroNeedleAngle
+          return d3.interpolateString("rotate(0," + needleCentre + ")", "rotate(" + needleRot + "," + needleCentre + ")")
+        });
+      unitsLabel.transition().duration(1000).ease("elastic", 1, 0.9).tween("text", function(d) {
+        var i = d3.interpolateString(opt.minVal, opt.needleVal)
+        return function(t) {
+          this.textContent = Math.round(i(t)) + " " + opt.gaugeUnits;
+        };
+      });
+      // Function to update the gauge value
+      this.updateGauge = function(newVal) {
+        console.log('updateGauge(' + newVal + ')');
+        //Set default values if necessary
+        if (newVal == undefined)(opt.minVal)
+        //Animate the transistion of the needle to its new value
+        var needlePath = needleGroup.selectAll("path"),
+          oldVal = opt.needleVal
+        needlePath.transition().duration(1000).ease("elastic", 1, 0.9).attrTween("transform", function(d, i, a) {
+          needleAngleOld = valueScale(oldVal) - opt.zeroNeedleAngle
+          needleAngleNew = valueScale(newVal) - opt.zeroNeedleAngle
+          //Check for min/max ends of the needle
+          if (needleAngleOld + opt.zeroNeedleAngle > opt.maxTickAngle) {
+            needleAngleOld = opt.maxNeedleAngle - opt.zeroNeedleAngle
+          }
+          if (needleAngleOld + opt.zeroNeedleAngle < opt.zeroTickAngle) {
+            needleAngleOld = 0
+          }
+          if (needleAngleNew + opt.zeroNeedleAngle > opt.maxTickAngle) {
+            needleAngleNew = opt.maxNeedleAngle - opt.zeroNeedleAngle
+          }
+          if (needleAngleNew + opt.zeroNeedleAngle < opt.zeroTickAngle) {
+            needleAngleNew = 0
+          }
+          var needleCentre = originX + "," + originY
+          return d3.interpolateString("rotate(" + needleAngleOld + "," + needleCentre + ")", "rotate(" + needleAngleNew + "," + needleCentre + ")")
+        });
+        unitsLabel.transition().duration(1000).ease("elastic", 1, 0.9).tween("text", function(d) {
+          var i = d3.interpolateString(oldVal, newVal)
+          return function(t) {
+            this.textContent = Math.round(i(t)) + " " + opt.gaugeUnits;
+          };
+        });
+        //Update the current value
+        opt.needleVal = newVal;
+      }
+      this.updateGauge(opt.needleVal);
+    }
+  }
+
+  function dToR(angleDeg) {
+    //Turns an angle in degrees to radians
+    var angleRad = angleDeg * (Math.PI / 180);
+    return angleRad;
+  }
+</script>
