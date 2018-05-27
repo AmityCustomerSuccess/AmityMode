@@ -1,8 +1,8 @@
 amityMode = {
 
       reportError: function(msg) {
-        $("<h1 class='mode-error'>").text(msg).prependTo(document.body);
-      },
+         $("<h1 class='mode-error'>").text(msg).prependTo(document.body);
+         },
 
       getColumnsFromQuery: function(queryName) {
         var columns = datasets.filter(function(d) {
@@ -32,160 +32,128 @@ amityMode = {
           return data.content;
         },
 
-      amityTimeline : function (opt) {
-          console.log('new amityTimeline')
-          // console.log(JSON.stringify(opt, ' ', 3))
+      amityTimeline: function (opt) {
+         console.log('new amityTimeline')
+         // console.log(JSON.stringify(opt, ' ', 3))
 
-          var timelineLib = new amityMode.timeline();
-
-          var data = amityMode.getDataFromQuery(opt.queryName),
-          startColumnName = opt.startCol,
-          endColumnName = opt.endCol,
-          statusColumName = opt.statusCol,
-          accountCol = opt.accountCol,
-          width = opt.width ? opt.width : "900",
-          divName = opt.divName ? opt.divName : "#timeline1";
-
-          // console.log(JSON.stringify(data[0], ' ', 3));
-          var active = {
-             label: "Active",
-             color: {
-                start: "gold",
-                end: "darkcyan",
-                bar: "gold"
-                }
-            };
-
-          var converted = {
-             label: "Converted",
-             color: {
-                start: "lightgreen",
-                end: "darkgreen",
-                bar: "lightgreen"
-                }
-            };
-
-          var didNotConvert = {
-             label: "Did Not Convert",
-             color: {
-                start: "lightcoral",
-                end: "darkred",
-                bar: "lightcoral"
-                }
-             };
-
-        var statusList = {};
-        statusList.active = active;
-        statusList.converted = converted;
-        statusList.didNotConverted = didNotConvert;
-
-        var timelines = makeTimelines(data, startColumnName, endColumnName, statusColumName, accountCol, statusList);
-        drawTimelines(timelines);
-
+         var timelineLib = new amityMode.timeline();
+         var data = amityMode.getDataFromQuery(opt.queryName),
+         startCol = opt.startCol,
+         endCol = opt.endCol,
+         classCol = opt.classCol,
+         rowNameCol = opt.rowNameCol,
+         width = opt.width ? opt.width : "900",
+         divName = opt.divName ? opt.divName : "#timeline1",
+         classList = opt.classList,
+         labels = opt.labels;
+         var timelines = makeTimelines(data, startCol, endCol, classCol, rowNameCol, classList);
+         console.log('timelines = \n' + JSON.stringify(timelines, ' ', 3));
+         drawTimelines(timelines);
 
         function drawTimelines(timelines) {
            console.log('drawTimelines()');
-           console.log(JSON.stringify(timelines, ' ', 3));
            drawTimeline(timelines.beginning, timelines.ending, timelines.timelines)
            };
 
-        function drawTimeline(beginning, ending, timelinea) {
-              console.log('drawTimeline()');
-              console.log(JSON.stringify(timelinea, ' ', 3));
-              console.log('beginning = ' + beginning);
-              console.log('ending = ' + ending);
+        function drawTimeline(beginning, ending, timelines) {
+           console.log('drawTimeline()');
 
-              var chart = d3.timeline()
-                            .tickFormat({
-                               format: d3.time.format("%b %Y"),
-                               tickTime: d3.time.months,
-                               tickInterval: 1,
-                               tickSize: 3
-                               })
-                            .beginning(beginning) // we can optionally add beginning and ending times to speed up rendering a little
-                            .ending(ending)
-                            .showTimeAxisTick() // toggles tick marks
-                            .stack()
-                            .margin({
-                               left: 100,
-                               right: 0,
-                               top: 0,
-                               bottom: 0
-                               })
-                           .orient("bottom")
-                           .showToday()
-                           .rotateTicks(45)
-                           .showTodayFormat({
-                              marginTop: 20,
-                              marginBottom: 40,
-                              width: 3,
-                              color: "teal"
-                              });
+           var chart = d3.timeline()
+                         .tickFormat({
+                            format: d3.time.format("%b %Y"),
+                            tickTime: d3.time.months,
+                            tickInterval: 1,
+                            tickSize: 3
+                            })
+                         .beginning(beginning) // we can optionally add beginning and ending times to speed up rendering a little
+                         .ending(ending)
+                         .showTimeAxisTick() // toggles tick marks
+                         .stack()
+                         .margin({
+                            left: 100,
+                            right: 0,
+                            top: 0,
+                            bottom: 0
+                            })
+                         .orient("bottom")
+                         .showToday()
+                         .rotateTicks(45)
+                         .showTodayFormat({
+                            marginTop: 20,
+                            marginBottom: 40,
+                            width: 3,
+                            color: "teal"
+                            });
 
-                    console.log("OKIE DOKIE.")
-                    console.log('width = ' + width)
-                    var svg = d3.select(divName)
-                                .append("svg")
-                                .attr("width", width)
-                                .datum(timelinea)
-                                .call(chart);
-                       }
+         var svg = d3.select(divName)
+                     .append("svg")
+                     .attr("width", width)
+                     .datum(timelines)
+                     .call(chart);
+         }
 
 
-        function makeTimeline(start, end, account, format) {
+        function makeTimeline(row, startTime, endTime, rowName, classDef) {
            console.log('makeTimeline()');
-           console.log(start)
-           console.log(new Date(start).valueOf())
+           console.log(JSON.stringify(classDef, ' ', 3));
+
+           let body = {};
+           body.starting_time = new Date(startTime).valueOf();
+           body.ending_time = new Date(endTime).valueOf();
+           if (classDef.bodyLabelCol) body.label = row[classDef.bodyLabelCol];
+           if (classDef.bodyColor) body.color = classDef.bodyColor;
+           if (classDef.bodyLabelXOffset) body.x_offset = classDef.bodyLabelXOffset;
+
+           let start = {};
+           start.starting_time = new Date(startTime).valueOf();
+           start.display = "circle";
+           if (classDef.startLabelCol) start.label = row[classDef.startLabelCol];
+           if (classDef.startColor) start.color = classDef.startColor;
+           if (classDef.startLabelXOffset) start.x_offset = classDef.startLabelXOffset;
+
+           let end = {};
+           end.starting_time = new Date(endTime).valueOf();
+           end.display = "circle";
+           if (classDef.endLabelCol) end.label = row[classDef.endLabelCol];
+           if (classDef.endColor) end.color = classDef.endColor;
+           if (classDef.endLabelXOffset) end.x_offset = classDef.endLabelXOffset;
+
            return {
-              label: account,
-              times: [
-              {  // Main Bar
-                 starting_time: new Date(start).valueOf(),
-                 ending_time: new Date(end).valueOf(),
-                 color: format.color.bar
-                 },
-              {  // Start Circle
-                 starting_time: new Date(start).valueOf(),
-                 display: "circle",
-                 color: format.color.start
-                 },
-              {  // End Circle
-                 starting_time: new Date(end).valueOf(),
-                 display: "circle",
-                 color: format.color.end,
-                 label: format.label
-                 }
-              ]
+              label: rowName,
+              "class": classDef.class,
+              times: [body, start, end]
            }
         }
-
-
-
-        function makeTimelines(data, startColumnName, endColumnName, statusColumnName, accountColumnName, statusList) {
+        
+        function makeTimelines(data, startCol, endCol, classCol, rowNameCol, classList) {
            console.log('makeTimelines()');
-           console.log(startColumnName)
+           // console.log('classCol = ' + classCol)
+           // console.log('rowNameCol = ' + rowNameCol)
+           // console.log('classList = ' + JSON.stringify(classList))
 
-           var timelines = [];
-           var startCol = [],
-               endCol = [];
+           let timelines =  [],
+               startDates = [],
+               endDates =   [];
 
-           for (var t = 0; t < data.length; t++){
-              console.log('t = ' + t);
+           for (var t = 0; t < data.length; t++) {
+              let row = data[t]
+              let startDate = row[startCol]
+              let endDate = row[endCol]
+              let className = row[classCol]
+              console.log('className = ' + className)
+              let rowName = row[rowNameCol]
+              console.log('rowName = ' + rowName)
+              let classDef = classList[className];
+              console.log('classDef = ' + JSON.stringify(classDef))
+              timelines[t] = makeTimeline(row, startDate, endDate, rowName, classDef);
+              console.log(t + ' : ' + JSON.stringify(timelines[t]));
 
-              console.log(data[t][startColumnName]);
-
-              var statusVal = data[t][statusColumName];
-              timelines[t] = makeTimeline(data[t][startColumnName], data[t][endColumnName], data[t][accountColumnName], statusList[statusVal]);
-              console.log(JSON.stringify(timelines[t]));
-              startCol[t] = new Date(data[t][startColumnName]).valueOf();
-              endCol[t] =  new Date(data[t][endColumnName]).valueOf();
+              startDates[t] = new Date(startDate).valueOf();
+              endDates[t] =  new Date(endDate).valueOf();
               }
-           console.log(JSON.stringify(startCol))
-           console.log(JSON.stringify(endCol))
-           console.log(Math.min.apply( Math, startCol))
-           console.log(Math.max.apply( Math, endCol))
-           var beginning = new moment(Math.min.apply( Math, startCol)).subtract(1,'months').startOf();
-           var ending = new moment(Math.max.apply( Math, endCol)).add(1, 'months').startOf();
+
+           var beginning = new moment(Math.min.apply( Math, startDates)).subtract(1,'months').startOf();
+           var ending = new moment(Math.max.apply( Math, endDates)).add(1, 'months').startOf();
            return {
               beginning: beginning,
               ending: ending,
@@ -195,78 +163,76 @@ amityMode = {
         },
 
       timeline: (
-          d3.timeline = function() {
-          console.log("NEW TIMELINE()")
+         d3.timeline = function() {
 
-          var DISPLAY_TYPES = ["circle", "rect"];
-
-          var hover = function() {},
-            mouseover = function() {},
-            mouseout = function() {},
-            click = function() {},
-            scroll = function() {},
-            labelFunction = function(label) {
-              return label;
-            },
-            navigateLeft = function() {},
-            navigateRight = function() {},
-            orient = "bottom",
-            width = null,
-            height = null,
-            rowSeparatorsColor = null,
-            backgroundColor = null,
-            tickFormat = {
-              format: d3.time.format("%I %p"),
-              tickTime: d3.time.hours,
-              tickInterval: 1,
-              tickSize: 6,
-              tickValues: null
-            },
-            colorCycle = d3.scale.category20(),
-            colorPropertyName = null,
-            display = "rect",
-            beginning = 0,
-            labelMargin = 0,
-            ending = 0,
-            margin = {
-              left: 30,
-              right: 30,
-              top: 30,
-              bottom: 30
-            },
-            stacked = false,
-            rotateTicks = false,
-            timeIsRelative = false,
-            fullLengthBackgrounds = false,
-            itemHeight = 20,
-            itemMargin = 5,
-            navMargin = 60,
-            showTimeAxis = true,
-            showAxisTop = false,
-            showTodayLine = false,
-            timeAxisTick = false,
-            timeAxisTickFormat = {
-              stroke: "stroke-dasharray",
-              spacing: "4 10"
-            },
-            showTodayFormat = {
-              marginTop: 25,
-              marginBottom: 0,
-              width: 1,
-              color: colorCycle
-            },
-            showBorderLine = false,
-            showBorderFormat = {
-              marginTop: 25,
-              marginBottom: 0,
-              width: 1,
-              color: colorCycle
-            },
-            showAxisHeaderBackground = false,
-            showAxisNav = false,
-            showAxisCalendarYear = false,
-            axisBgColor = "white",
-            chartData = {};
+          const DISPLAY_TYPES = ["circle", "rect"]
+          let hover = function() {},
+              mouseover = function() {},
+              mouseout = function() {},
+              click = function() {},
+              scroll = function() {},
+              labelFunction = function(label) {
+                 return label;
+              },
+              navigateLeft = function() {},
+              navigateRight = function() {},
+              orient = "bottom",
+              width = null,
+              height = null,
+              rowSeparatorsColor = null,
+              backgroundColor = null,
+              tickFormat = {
+                 format: d3.time.format("%I %p"),
+                 tickTime: d3.time.hours,
+                 tickInterval: 1,
+                 tickSize: 6,
+                 tickValues: null
+                 },
+              colorCycle = d3.scale.category20(),
+              colorPropertyName = null,
+              display = "rect",
+              beginning = 0,
+              labelMargin = 0,
+              ending = 0,
+              margin = {
+                 left: 30,
+                 right: 30,
+                 top: 30,
+                 bottom: 30
+                 },
+              stacked = false,
+              rotateTicks = false,
+              timeIsRelative = false,
+              fullLengthBackgrounds = false,
+              itemHeight = 20,
+              itemMargin = 5,
+              navMargin = 60,
+              showTimeAxis = true,
+              showAxisTop = false,
+              showTodayLine = false,
+              timeAxisTick = false,
+              timeAxisTickFormat = {
+                 stroke: "stroke-dasharray",
+                 spacing: "4 10"
+                 },
+              showTodayFormat = {
+                 marginTop: 25,
+                 marginBottom: 0,
+                 width: 1,
+                 color: colorCycle
+                 },
+              showBorderLine = false,
+              showBorderFormat = {
+                 marginTop: 25,
+                 marginBottom: 0,
+                 width: 1,
+                 color: colorCycle
+                 },
+              showAxisHeaderBackground = false,
+              showAxisNav = false,
+              showAxisCalendarYear = false,
+              axisBgColor = "white",
+              chartData = {};
 
           var appendTimeAxis = function(g, xAxis, yPosition) {
 
@@ -466,6 +432,7 @@ amityMode = {
               chartData = d;
               d.forEach(function(datum, index) {
                 var data = datum.times;
+                console.log('timeline data = ' + JSON.stringify(data, ' ', 3));
                 var hasLabel = (typeof(datum.label) != "undefined");
 
                 // issue warning about using id per data set. Ids should be individual to data elements
@@ -639,7 +606,9 @@ amityMode = {
             }
 
             function getXTextPos(d, i) {
-              return margin.left + (d.starting_time - beginning) * scaleFactor + 5;
+              let pos = margin.left + (d.starting_time - beginning) * scaleFactor + 5;
+              if (d.x_offset) pos += d.x_offset;
+              return pos;
             }
 
             function setHeight() {
@@ -1298,4 +1267,3 @@ amityMode = {
     var angleRad = angleDeg * (Math.PI / 180);
     return angleRad;
   }
-</script>
